@@ -6,10 +6,12 @@ from PyQt5.QtWidgets import QApplication
 from qfluentwidgets import (NavigationAvatarWidget, NavigationItemPosition, MessageBox, FluentWindow,
                             SplashScreen, SystemThemeListener, isDarkTheme)
 from qfluentwidgets import FluentIcon as FIF
-from .date_time_interface import DateTimeInterface
+
+from .gallery_interface import GalleryInterface
+from .exp_interface import DateTimeInterface
 from .home_interface import HomeInterface
 from .setting_interface import SettingInterface
-from ..common.config import ZH_SUPPORT_URL, EN_SUPPORT_URL, cfg
+from ..common.config import cfg
 from ..common.icon import Icon
 from ..common.signal_bus import signalBus
 
@@ -22,41 +24,42 @@ class MainWindow(FluentWindow):
         super().__init__()
         self.initWindow()
 
-        # create system theme listener
+        # 创建系统主题监听器
         self.themeListener = SystemThemeListener(self)
 
-        # create sub interface
+        # 创建子界面
         self.homeInterface = HomeInterface(self)
         self.dateTimeInterface = DateTimeInterface(self)
         self.settingInterface = SettingInterface(self)
 
-
-        # enable acrylic effect
+        # 启用亚克力效果
         self.navigationInterface.setAcrylicEnabled(True)
+        self.connectSignalToSlot()
 
-
-
-        # add items to navigation interface
+        # 向导航界面添加项目
         self.initNavigation()
         self.splashScreen.finish()
 
-        # start theme listener
+        # 启动主题监听器
         self.themeListener.start()
 
-    def initNavigation(self):
-        # add navigation items
+    def connectSignalToSlot(self):
+        signalBus.micaEnableChanged.connect(self.setMicaEffectEnabled)
+        signalBus.switchToSampleCard.connect(self.switchToSample)
 
-        self.addSubInterface(self.homeInterface, FIF.HOME, self.tr('Home'))
+    def initNavigation(self):
+
+        # 添加导航项目
+        self.addSubInterface(self.homeInterface, FIF.HOME, "主页")
         self.navigationInterface.addSeparator()
 
         pos = NavigationItemPosition.SCROLL
-        self.addSubInterface(self.dateTimeInterface, FIF.DATE_TIME, "dateTime", pos)
+        self.addSubInterface(self.dateTimeInterface, FIF.DATE_TIME, "测试界面", pos)
 
-
-        # add custom widget to bottom
+        # 将自定义小部件添加到底部
 
         self.addSubInterface(
-            self.settingInterface, FIF.SETTING, self.tr('Settings'), NavigationItemPosition.BOTTOM)
+            self.settingInterface, FIF.SETTING, "设置", NavigationItemPosition.BOTTOM)
 
     def initWindow(self):
         self.resize(960, 780)
@@ -66,17 +69,16 @@ class MainWindow(FluentWindow):
 
         self.setMicaEffectEnabled(cfg.get(cfg.micaEnabled))
 
-        # create splash screen
+        # 创建启动画面
         self.splashScreen = SplashScreen(self.windowIcon(), self)
         self.splashScreen.setIconSize(QSize(106, 106))
         self.splashScreen.raise_()
 
         desktop = QApplication.desktop().availableGeometry()
         w, h = desktop.width(), desktop.height()
-        self.move(w//2 - self.width()//2, h//2 - self.height()//2)
+        self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
         self.show()
         QApplication.processEvents()
-
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
@@ -91,6 +93,14 @@ class MainWindow(FluentWindow):
     def _onThemeChangedFinished(self):
         super()._onThemeChangedFinished()
 
-        # retry
+        # 重试
         if self.isMicaEffectEnabled():
             QTimer.singleShot(100, lambda: self.windowEffect.setMicaEffect(self.winId(), isDarkTheme()))
+
+    def switchToSample(self, routeKey, index):
+        """ switch to sample """
+        interfaces = self.findChildren(GalleryInterface)
+        for w in interfaces:
+            if w.objectName() == routeKey:
+                self.stackedWidget.setCurrentWidget(w, False)
+                w.scrollToCard(index)
