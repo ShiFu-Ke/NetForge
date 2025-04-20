@@ -5,11 +5,6 @@ NetForge
   网络工具
 </p>
 
-
-<p>
-正在调试框架......
-</p>
-
 ## 依赖安装📥
 ```shell
 pip install "PyQt-Fluent-Widgets[full]" -i https://pypi.org/simple/

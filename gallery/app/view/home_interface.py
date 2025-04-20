@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt, QRectF
 from PyQt5.QtGui import QPixmap, QPainter, QColor, QBrush, QPainterPath, QLinearGradient
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
 
-from qfluentwidgets import ScrollArea, isDarkTheme, FluentIcon
+from qfluentwidgets import ScrollArea, isDarkTheme, FluentIcon, InfoBarPosition, InfoBar
 from ..common.config import cfg, HELP_URL, REPO_URL, EXAMPLE_URL, FEEDBACK_URL
 from ..common.icon import Icon, FluentIconBase
 from ..components.link_card import LinkCardView
@@ -125,13 +125,13 @@ class HomeInterface(ScrollArea):
     def loadSamples(self):
         """ 加载样本 """
 
-        # 测试界面
-        dateTimeView = SampleCardView('测试界面', self.view)
+        # 快速跳转
+        dateTimeView = SampleCardView('快速跳转', self.view)
         dateTimeView.addSampleCard(
             icon=":/gallery/images/controls/CalendarDatePicker.png",
-            title="跳转1",
-            content="跳转测试",
-            routeKey="expInterface",
+            title="命令模板",
+            content="配置设备要执行的命令模板",
+            routeKey="commandInterface",
             index=0
         )
         self.vBoxLayout.addWidget(dateTimeView)

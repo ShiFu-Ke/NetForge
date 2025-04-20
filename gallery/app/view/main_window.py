@@ -1,14 +1,13 @@
 # coding: utf-8
-from PyQt5.QtCore import QUrl, QSize, QTimer
-from PyQt5.QtGui import QIcon, QDesktopServices, QColor
+from PyQt5.QtCore import QSize, QTimer
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
-from qfluentwidgets import (NavigationAvatarWidget, NavigationItemPosition, MessageBox, FluentWindow,
-                            SplashScreen, SystemThemeListener, isDarkTheme)
+from qfluentwidgets import (NavigationItemPosition, FluentWindow, SplashScreen, SystemThemeListener, isDarkTheme)
 from qfluentwidgets import FluentIcon as FIF
 
 from .gallery_interface import GalleryInterface
-from .exp_interface import DateTimeInterface
+from .command_interface import CommandInterface
 from .home_interface import HomeInterface
 from .setting_interface import SettingInterface
 from ..common.config import cfg
@@ -29,7 +28,7 @@ class MainWindow(FluentWindow):
 
         # 创建子界面
         self.homeInterface = HomeInterface(self)
-        self.dateTimeInterface = DateTimeInterface(self)
+        self.commandInterface = CommandInterface(self)
         self.settingInterface = SettingInterface(self)
 
         # 启用亚克力效果
@@ -54,7 +53,7 @@ class MainWindow(FluentWindow):
         self.navigationInterface.addSeparator()
 
         pos = NavigationItemPosition.SCROLL
-        self.addSubInterface(self.dateTimeInterface, FIF.DATE_TIME, "测试界面", pos)
+        self.addSubInterface(self.commandInterface, FIF.DATE_TIME, "命令模板", pos)
 
         # 将自定义小部件添加到底部
 
@@ -103,4 +102,3 @@ class MainWindow(FluentWindow):
         for w in interfaces:
             if w.objectName() == routeKey:
                 self.stackedWidget.setCurrentWidget(w, False)
-                w.scrollToCard(index)
