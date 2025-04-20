@@ -10,7 +10,6 @@ from qfluentwidgets import FluentTranslator
 from gallery.app.common.config import cfg
 from gallery.app.view.main_window import MainWindow
 
-
 # 启用dpi比例
 if cfg.get(cfg.dpiScale) == "Auto":
     QApplication.setHighDpiScaleFactorRoundingPolicy(
@@ -28,7 +27,6 @@ app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
 
 # 翻译默认中文
 translator = FluentTranslator(QLocale(QLocale.Chinese, QLocale.China))
-
 app.installTranslator(translator)
 
 # 创建主窗口
