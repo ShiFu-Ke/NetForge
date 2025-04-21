@@ -4,12 +4,13 @@ from typing import List
 from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QAbstractItemView
+from netmiko.cli_tools.helpers import update_device_params
 from netmiko.ssh_dispatcher import CLASS_MAPPER_BASE
 from qfluentwidgets import LineEdit, ComboBox, PushButton, BodyLabel, CardWidget, ListWidget, PrimaryPushButton, \
-    StrongBodyLabel, MessageBoxBase, SubtitleLabel
+    StrongBodyLabel, MessageBoxBase, SubtitleLabel, MessageBox, InfoBar, InfoBarPosition
 
 from .gallery_interface import GalleryInterface
-from ..Util.yaml_util import YamlUtil
+from ..util.yaml_util import YamlUtil
 
 
 class CommandInterface(GalleryInterface):
@@ -31,19 +32,16 @@ class CommandInterface(GalleryInterface):
                                                                 'display fan', 'display cpu-usage'],
                                         'backup_commands': ['display current-configuration'], 'send_command': '>'}}
         self.command_yaml = YamlUtil("app/config/command_templates.yml", default_data)
-        self.command_templates = self.command_yaml.get_keys()
 
         # 配置组管理
         group_layout = QHBoxLayout()
         group_layout.setSpacing(10)
-        group_combo = ComboBox()
-        group_combo.addItems(self.command_templates)  # 添加数据
-        group_combo.setCurrentIndex(0)  # 选中第一个
-        group_combo.currentIndexChanged.connect(  # 绑定下拉框的值发生变化更新选中的模板数据
-            lambda: self.update_select_data(group_combo.currentText()))
-        btn_new = PushButton("新建配置组")
-        btn_del = PushButton("删除当前组")
-        group_layout.addWidget(group_combo, 6)
+        self.group_combo = ComboBox()
+        self.group_combo.currentIndexChanged.connect(  # 绑定下拉框的值发生变化更新选中的模板数据
+            lambda: self.update_select_data(self.group_combo.currentText()))
+        btn_new = PushButton("新建模板")
+        btn_del = PushButton("删除模板")
+        group_layout.addWidget(self.group_combo, 6)
         group_layout.addWidget(btn_new, 1)
         group_layout.addWidget(btn_del, 1)
         btn_new.clicked.connect(lambda: self.add_config_group())
@@ -55,13 +53,20 @@ class CommandInterface(GalleryInterface):
         form_card.setProperty('lightBackground', '#FFFFFF')  # 浅色模式背景
         form_card.setProperty('darkBackground', '#2B2B2B')  # 深色模式背景
         form_layout = QHBoxLayout(form_card)
-        form_layout.setSpacing(5)
+        form_layout.setSpacing(3)
         self.device_type_combo = ComboBox()
         self.device_type_combo.addItems(sorted(CLASS_MAPPER_BASE.keys(), key=str.lower))
+        self.device_type_combo.activated.connect(
+            lambda: self.command_yaml.update([self.group_combo.currentText(), "device_type"],
+                                             self.device_type_combo.currentText()))
         self.send_command_edit = LineEdit()
+        self.send_command_edit.setMaxLength(10)
+        self.send_command_edit.textChanged.connect(
+            lambda: self.command_yaml.update([self.group_combo.currentText(), "send_command"],
+                                             self.send_command_edit.text()))
         form_layout.addWidget(BodyLabel("设备类型："))
-        form_layout.addWidget(self.device_type_combo, 5)
-        form_layout.addSpacing(30)
+        form_layout.addWidget(self.device_type_combo, 1)
+        form_layout.addSpacing(50)
         form_layout.addWidget(BodyLabel("结束符号："))
         form_layout.addWidget(self.send_command_edit, 1)
 
@@ -80,12 +85,15 @@ class CommandInterface(GalleryInterface):
         self.inspection_list.setDragDropMode(QAbstractItemView.InternalMove)
         self.inspection_list.setDragEnabled(True)
         self.inspection_list.setAcceptDrops(True)
-        self.combo_listeners(self.inspection_list, lambda: print("666"))
+        self.inspection_list.model().rowsMoved.connect(
+            lambda: self.command_yaml.update([self.group_combo.currentText(), "inspection_commands"],
+                                             [self.inspection_list.item(i).text() for i in
+                                              range(self.inspection_list.count())]))
 
         inspection_btn_add = PrimaryPushButton("添加命令")
         inspection_btn_remove = PrimaryPushButton("删除选中")
-        inspection_btn_add.clicked.connect(lambda: self.add_command("添加巡检命令", []))
-        inspection_btn_remove.clicked.connect(lambda: self.remove_command([]))
+        inspection_btn_add.clicked.connect(lambda: self.add_inspection_command())
+        inspection_btn_remove.clicked.connect(lambda: self.remove_inspection_command())
         inspection_btn_layout = QHBoxLayout()
         inspection_btn_layout.addWidget(inspection_btn_add)
         inspection_btn_layout.addWidget(inspection_btn_remove)
@@ -106,11 +114,15 @@ class CommandInterface(GalleryInterface):
         self.backup_list.setDragDropMode(QAbstractItemView.InternalMove)
         self.backup_list.setDragEnabled(True)
         self.backup_list.setAcceptDrops(True)
+        self.backup_list.model().rowsMoved.connect(
+            lambda: self.command_yaml.update([self.group_combo.currentText(), "backup_commands"],
+                                             [self.backup_list.item(i).text() for i in
+                                              range(self.backup_list.count())]))
 
         backup_btn_add = PrimaryPushButton("添加命令")
         backup_btn_remove = PrimaryPushButton("删除选中")
-        backup_btn_add.clicked.connect(lambda: self.add_command("添加备份命令", []))
-        backup_btn_remove.clicked.connect(lambda: self.remove_command([]))
+        backup_btn_add.clicked.connect(lambda: self.add_backup_command())
+        backup_btn_remove.clicked.connect(lambda: self.remove_backup_command())
         backup_btn_layout = QHBoxLayout()
         backup_btn_layout.addWidget(backup_btn_add)
         backup_btn_layout.addWidget(backup_btn_remove)
@@ -129,33 +141,74 @@ class CommandInterface(GalleryInterface):
         self.vBoxLayout.addLayout(command_layout)
 
         # 数据更新
-        self.update_select_data(group_combo.currentText())
+        self.update_group_combo(self.command_yaml.get_keys()[0])
 
     def add_config_group(self):
         w = CustomMessageBox("新建命令模板", "输入命令模板名称", self.window())
         if w.exec():
-            print(w.lineEdit.text())
+            new_data = {'device_type': 'huawei', 'inspection_commands': [], 'backup_commands': [], 'send_command': ''}
+            self.command_yaml.update([w.lineEdit.text()], new_data)
+            self.update_group_combo(w.lineEdit.text())
 
     def remove_config_group(self):
-        pass
+        if self.group_combo.count() <= 1:
+            InfoBar.warning(
+                title="删除模板",
+                content="剩最后一个了，不准删！",
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+            return
+        if self.show_message_dialog("删除模板", "你确定？删了就回不来了哦！"):
+            self.command_yaml.delete(self.group_combo.text())
+            self.update_group_combo(self.command_yaml.get_keys()[0])
 
-    def add_command(self, title_text, command_list):
-        w = CustomMessageBox(title_text, "输入命令内容", self.window())
+    def add_inspection_command(self):
+        w = CustomMessageBox("添加巡检命令", "输入命令内容", self.window())
         if w.exec():
-            print(w.lineEdit.text())
+            self.inspection_list.addItem(w.lineEdit.text())
+            self.command_yaml.update([self.group_combo.currentText(), "inspection_commands"],
+                                     [self.inspection_list.item(i).text() for i in range(self.inspection_list.count())])
 
-    def remove_command(self, command_list):
-        pass
+    def add_backup_command(self):
+        w = CustomMessageBox("添加备份命令", "输入命令内容", self.window())
+        if w.exec():
+            self.backup_list.addItem(w.lineEdit.text())
+            self.command_yaml.update([self.group_combo.currentText(), "backup_commands"],
+                                     [self.backup_list.item(i).text() for i in range(self.backup_list.count())])
 
-    @staticmethod
-    def combo_listeners(combo, func):
-        """监听ComboBox多动作"""
-        combo.model().rowsMoved.connect(func)  # 移动行
-        combo.model().rowsInserted.connect(func)  # 增加行
-        combo.model().rowsAboutToBeRemoved.connect(func)  # 删除行
+    def remove_inspection_command(self):
+        if self.show_message_dialog("删除模板", "你确定？删了就回不来了哦！"):
+            selected_items = self.inspection_list.selectedItems()
+            for item in reversed(selected_items):
+                row = self.inspection_list.row(item)
+                taken_item = self.inspection_list.takeItem(row)
+                del taken_item
+            self.command_yaml.update([self.group_combo.currentText(), "inspection_commands"],
+                                     [self.inspection_list.item(i).text() for i in range(self.inspection_list.count())])
+
+    def remove_backup_command(self):
+        if self.show_message_dialog("删除模板", "你确定？删了就回不来了哦！"):
+            selected_items = self.backup_list.selectedItems()
+            for item in reversed(selected_items):
+                row = self.backup_list.row(item)
+                taken_item = self.backup_list.takeItem(row)
+                del taken_item
+            self.command_yaml.update([self.group_combo.currentText(), "backup_commands"],
+                                     [self.backup_list.item(i).text() for i in range(self.backup_list.count())])
+
+    def update_group_combo(self, current_text):
+        self.group_combo.clear()
+        command_templates = self.command_yaml.get_keys()
+        self.group_combo.addItems(command_templates)  # 添加数据
+        self.group_combo.setCurrentText(current_text)  # 选中第一个
+        self.update_select_data(current_text)
 
     def update_select_data(self, command_templates: str):
-        if command_templates not in self.command_templates:
+        if command_templates not in self.command_yaml.get_keys():
             return
 
         # 修改硬件类型下拉框选项
@@ -177,6 +230,14 @@ class CommandInterface(GalleryInterface):
         backup_commands = self.command_yaml.get([command_templates, "backup_commands"])
         if type(backup_commands) is list:
             self.backup_list.addItems(backup_commands)
+
+    def show_message_dialog(self, title, content):
+        w = MessageBox(title, content, self.window())
+        w.setContentCopyable(True)
+        if w.exec():
+            return True
+        else:
+            return False
 
 
 class CustomMessageBox(MessageBoxBase):

@@ -43,9 +43,7 @@ class YamlUtil:
             return list(self.data.keys())
         return []
 
-    def update(self, key_path: str, value: Any) -> None:
-        """更新嵌套键值（自动创建中间路径）"""
-        keys = key_path.split('.')
+    def update(self, keys: list, value: Any) -> None:
         current = self.data
         for key in keys[:-1]:
             current = current.setdefault(key, {})
