@@ -1,13 +1,18 @@
 # coding: utf-8
+import sys
+
 from PyQt5.QtCore import QSize, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
-from qfluentwidgets import (NavigationItemPosition, FluentWindow, SplashScreen, SystemThemeListener, isDarkTheme)
+from qfluentwidgets import (NavigationItemPosition, FluentWindow, SplashScreen, SystemThemeListener, isDarkTheme,
+                            setThemeColor)
 from qfluentwidgets import FluentIcon as FIF
+from qframelesswindow.utils import getSystemAccentColor
 
 from .gallery_interface import GalleryInterface
 from .command_interface import CommandInterface
+from .user_interface import UserInterface
 from .home_interface import HomeInterface
 from .setting_interface import SettingInterface
 from ..common.config import cfg
@@ -29,6 +34,7 @@ class MainWindow(FluentWindow):
         # 创建子界面
         self.homeInterface = HomeInterface(self)
         self.commandInterface = CommandInterface(self)
+        self.userInterface = UserInterface(self)
         self.settingInterface = SettingInterface(self)
 
         # 启用亚克力效果
@@ -53,7 +59,10 @@ class MainWindow(FluentWindow):
         self.navigationInterface.addSeparator()
 
         pos = NavigationItemPosition.SCROLL
-        self.addSubInterface(self.commandInterface, FIF.DATE_TIME, "命令模板", pos)
+
+        self.addSubInterface(self.commandInterface, FIF.COMMAND_PROMPT, "命令模板", pos)
+        self.addSubInterface(self.userInterface, FIF.PEOPLE, "用户模板",pos)
+
 
         # 将自定义小部件添加到底部
 
@@ -65,7 +74,6 @@ class MainWindow(FluentWindow):
         self.setMinimumWidth(760)
         self.setWindowIcon(QIcon(':/gallery/images/logo.png'))
         self.setWindowTitle('NetForge')
-
         self.setMicaEffectEnabled(cfg.get(cfg.micaEnabled))
 
         # 创建启动画面

@@ -1,10 +1,8 @@
 # coding:utf-8
-from typing import List
 
 from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QAbstractItemView
-from netmiko.cli_tools.helpers import update_device_params
 from netmiko.ssh_dispatcher import CLASS_MAPPER_BASE
 from qfluentwidgets import LineEdit, ComboBox, PushButton, BodyLabel, CardWidget, ListWidget, PrimaryPushButton, \
     StrongBodyLabel, MessageBoxBase, SubtitleLabel, MessageBox, InfoBar, InfoBarPosition
@@ -14,7 +12,7 @@ from ..util.yaml_util import YamlUtil
 
 
 class CommandInterface(GalleryInterface):
-    """ Date time interface """
+    """ 命令模板页面 """
 
     def __init__(self, parent=None):
         super().__init__(
@@ -53,7 +51,7 @@ class CommandInterface(GalleryInterface):
         form_card.setProperty('lightBackground', '#FFFFFF')  # 浅色模式背景
         form_card.setProperty('darkBackground', '#2B2B2B')  # 深色模式背景
         form_layout = QHBoxLayout(form_card)
-        form_layout.setSpacing(3)
+        form_layout.setSpacing(5)
         self.device_type_combo = ComboBox()
         self.device_type_combo.addItems(sorted(CLASS_MAPPER_BASE.keys(), key=str.lower))
         self.device_type_combo.activated.connect(
@@ -64,10 +62,10 @@ class CommandInterface(GalleryInterface):
         self.send_command_edit.textChanged.connect(
             lambda: self.command_yaml.update([self.group_combo.currentText(), "send_command"],
                                              self.send_command_edit.text()))
-        form_layout.addWidget(BodyLabel("设备类型："))
+        form_layout.addWidget(BodyLabel("设备类型:"))
         form_layout.addWidget(self.device_type_combo, 1)
         form_layout.addSpacing(50)
-        form_layout.addWidget(BodyLabel("结束符号："))
+        form_layout.addWidget(BodyLabel("结束符号:"))
         form_layout.addWidget(self.send_command_edit, 1)
 
         # 命令布局
@@ -144,15 +142,37 @@ class CommandInterface(GalleryInterface):
         self.update_group_combo(self.command_yaml.get_keys()[0])
 
     def add_config_group(self):
-        w = CustomMessageBox("新建命令模板", "输入命令模板名称", self.window())
+        w = CustomMessageBox("新建命令模板", "输入命令模板名称",is_zh=True,parent=self.window())
         if w.exec():
+            if w.lineEdit.text() in self.command_yaml.get_keys():
+                InfoBar.error(
+                    title="新建模板",
+                    content="模板名称已存在！",
+                    orient=Qt.Horizontal,
+                    isClosable=False,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                return
+            if w.lineEdit.text() is None or w.lineEdit.text().strip()=="":
+                InfoBar.warning(
+                    title="新建模板",
+                    content="模板名称不能为空！",
+                    orient=Qt.Horizontal,
+                    isClosable=False,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                return
             new_data = {'device_type': 'huawei', 'inspection_commands': [], 'backup_commands': [], 'send_command': ''}
             self.command_yaml.update([w.lineEdit.text()], new_data)
             self.update_group_combo(w.lineEdit.text())
 
     def remove_config_group(self):
         if self.group_combo.count() <= 1:
-            InfoBar.warning(
+            InfoBar.error(
                 title="删除模板",
                 content="剩最后一个了，不准删！",
                 orient=Qt.Horizontal,
@@ -167,15 +187,37 @@ class CommandInterface(GalleryInterface):
             self.update_group_combo(self.command_yaml.get_keys()[0])
 
     def add_inspection_command(self):
-        w = CustomMessageBox("添加巡检命令", "输入命令内容", self.window())
+        w = CustomMessageBox("添加巡检命令", "输入命令内容", parent=self.window())
         if w.exec():
+            if w.lineEdit.text() is None or w.lineEdit.text().strip()=="":
+                InfoBar.warning(
+                    title="添加巡检命令",
+                    content="命令不能为空！",
+                    orient=Qt.Horizontal,
+                    isClosable=False,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                return
             self.inspection_list.addItem(w.lineEdit.text())
             self.command_yaml.update([self.group_combo.currentText(), "inspection_commands"],
                                      [self.inspection_list.item(i).text() for i in range(self.inspection_list.count())])
 
     def add_backup_command(self):
-        w = CustomMessageBox("添加备份命令", "输入命令内容", self.window())
+        w = CustomMessageBox("添加备份命令", "输入命令内容", parent=self.window())
         if w.exec():
+            if w.lineEdit.text() is None or w.lineEdit.text().strip()=="":
+                InfoBar.warning(
+                    title="添加备份命令",
+                    content="命令不能为空！",
+                    orient=Qt.Horizontal,
+                    isClosable=False,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                return
             self.backup_list.addItem(w.lineEdit.text())
             self.command_yaml.update([self.group_combo.currentText(), "backup_commands"],
                                      [self.backup_list.item(i).text() for i in range(self.backup_list.count())])
@@ -243,13 +285,14 @@ class CommandInterface(GalleryInterface):
 class CustomMessageBox(MessageBoxBase):
     """ 文本输入消息框 """
 
-    def __init__(self, title_text, edit_text, parent=None):
+    def __init__(self, title_text, edit_text, is_zh=False,parent=None):
         super().__init__(parent)
         self.title_label = SubtitleLabel(title_text, self)
         self.lineEdit = LineEdit(self)
-        regex = QRegExp("[a-zA-Z0-9\\s]+")
-        validator = QRegExpValidator(regex)
-        self.lineEdit.setValidator(validator)
+        if not is_zh:
+            regex = QRegExp("[a-zA-Z0-9\\s]+")
+            validator = QRegExpValidator(regex)
+            self.lineEdit.setValidator(validator)
         self.lineEdit.setPlaceholderText(edit_text)
         self.lineEdit.setClearButtonEnabled(True)
 

@@ -126,12 +126,20 @@ class HomeInterface(ScrollArea):
         """ 加载样本 """
 
         # 快速跳转
-        dateTimeView = SampleCardView('快速跳转', self.view)
-        dateTimeView.addSampleCard(
-            icon=":/gallery/images/controls/CalendarDatePicker.png",
+        quick_jump_view = SampleCardView('快速跳转', self.view)
+        quick_jump_view.addSampleCard(
+            icon=":/gallery/images/controls/Command.png",
             title="命令模板",
             content="配置设备要执行的命令模板",
             routeKey="commandInterface",
             index=0
         )
-        self.vBoxLayout.addWidget(dateTimeView)
+        quick_jump_view.addSampleCard(
+            icon=":/gallery/images/controls/User.png",
+            title="用户模板",
+            content="配置用户登录的账户模板",
+            routeKey="userInterface",
+            index=0
+        )
+        self.vBoxLayout.addWidget(quick_jump_view)
+
