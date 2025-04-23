@@ -1,17 +1,21 @@
 # coding:utf-8
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtWidgets import QWidget, QLabel
-from qfluentwidgets import FluentIcon as FIF
+from typing import Tuple
+
+from PyQt5.QtCore import Qt, QUrl, QRegExp
+from PyQt5.QtGui import QDesktopServices, QPixmap, QRegExpValidator
+from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout
+from qfluentwidgets import FluentIcon as FIF, InfoBarPosition, FlyoutView, PushButton, FlyoutAnimationType, Flyout, \
+    MessageBoxBase, SubtitleLabel, LineEdit, PasswordLineEdit, PrimaryPushButton
 from qfluentwidgets import InfoBar
 from qfluentwidgets import (SettingCardGroup, SwitchSettingCard, OptionsSettingCard, HyperlinkCard,
                             PrimaryPushSettingCard, ScrollArea,
                             ExpandLayout, CustomColorSettingCard,
                             setTheme, setThemeColor, RangeSettingCard)
 
-from ..common.config import cfg, HELP_URL, FEEDBACK_URL, AUTHOR, VERSION, YEAR, isWin11
+from ..common.config import cfg, HELP_URL, FEEDBACK_URL, AUTHOR, VERSION, YEAR, isWin11, RELEASE_URL
 from ..common.signal_bus import signalBus
 from ..common.style_sheet import StyleSheet
+from ..util.update_util import UpdateUtil
 
 
 class SettingInterface(ScrollArea):
@@ -64,7 +68,6 @@ class SettingInterface(ScrollArea):
             self.personalGroup
         )
 
-
         # 软件更新
         self.updateSoftwareGroup = SettingCardGroup("软件更新", self.scrollWidget)
         self.updateOnStartUpCard = SwitchSettingCard(
@@ -92,6 +95,7 @@ class SettingInterface(ScrollArea):
             '通过提供反馈帮助我们改进PyQt Fluent小部件',
             self.aboutGroup
         )
+
         self.aboutCard = PrimaryPushSettingCard(
             '检查更新',
             FIF.INFO,
@@ -101,6 +105,10 @@ class SettingInterface(ScrollArea):
         )
 
         self.__initWidget()
+
+        # 检查更新
+        if cfg.get(cfg.checkUpdateAtStartUp):
+            self.check_update()
 
     def __initWidget(self):
         self.resize(1000, 800)
@@ -153,7 +161,6 @@ class SettingInterface(ScrollArea):
             parent=self
         )
 
-
     def __connectSignalToSlot(self):
         """ 将信号连接到信号槽 """
         cfg.appRestartSig.connect(self.__showRestartTooltip)
@@ -166,3 +173,46 @@ class SettingInterface(ScrollArea):
         # 关于
         self.feedbackCard.clicked.connect(
             lambda: QDesktopServices.openUrl(QUrl(FEEDBACK_URL)))
+
+        # 检查更新
+        self.aboutCard.clicked.connect(lambda: self.check_update())
+
+    def check_update(self):
+        is_update = UpdateUtil.is_update()
+        if is_update is None:
+            InfoBar.warning(
+                title="检查更新",
+                content="检查更新失败，请检查你的网络！",
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+            return
+        if is_update:
+            self.show_complex_flyout()
+
+    def show_complex_flyout(self):
+        view = FlyoutView(
+            title="发现新版本",
+            content="更新内容：\n1..\n2..",
+            image=':gallery/images/header1.png',
+            isClosable=True
+        )
+        # 修改关闭按钮槽函数
+        view.closeButton.clicked.disconnect()
+        view.closeButton.clicked.connect(view.close)
+        # add button to view
+
+        download_button = PrimaryPushButton('新版本下载')
+        download_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(RELEASE_URL)))
+        view.addWidget(download_button, align=Qt.AlignRight)
+
+        # adjust layout (optional)
+        view.widgetLayout.insertSpacing(1, 5)
+        view.widgetLayout.insertSpacing(0, 5)
+        view.widgetLayout.addSpacing(5)
+
+        # show view
+        Flyout.make(view, target=self.window(), parent=self, aniType=FlyoutAnimationType.PULL_UP)

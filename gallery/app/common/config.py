@@ -27,7 +27,7 @@ class Config(QConfig):
 
 YEAR = 2023
 AUTHOR = "Morbid"
-VERSION = "0.1.2(测试版)"
+VERSION = "v0.0.1"
 HELP_URL = "https://space.bilibili.com/660801861"
 REPO_URL = "https://github.com/ShiFu-Ke/NetForge"
 EXAMPLE_URL = "https://www.bilibili.com/"

@@ -105,7 +105,7 @@ class MainWindow(FluentWindow):
         if self.isMicaEffectEnabled():
             QTimer.singleShot(100, lambda: self.windowEffect.setMicaEffect(self.winId(), isDarkTheme()))
 
-    def switchToSample(self, routeKey, index):
+    def switchToSample(self, routeKey):
         """ switch to sample """
         interfaces = self.findChildren(GalleryInterface)
         for w in interfaces:
