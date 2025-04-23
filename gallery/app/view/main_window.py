@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QApplication
 from qfluentwidgets import (NavigationItemPosition, FluentWindow, SplashScreen, SystemThemeListener, isDarkTheme,
                             setThemeColor)
 from qfluentwidgets import FluentIcon as FIF
+from qframelesswindow import StandardTitleBar
 from qframelesswindow.utils import getSystemAccentColor
 
 from .gallery_interface import GalleryInterface
@@ -78,7 +79,7 @@ class MainWindow(FluentWindow):
 
         # 创建启动画面
         self.splashScreen = SplashScreen(self.windowIcon(), self)
-        self.splashScreen.setIconSize(QSize(106, 106))
+        self.splashScreen.setIconSize(QSize(150, 150))
         self.splashScreen.raise_()
 
         desktop = QApplication.desktop().availableGeometry()

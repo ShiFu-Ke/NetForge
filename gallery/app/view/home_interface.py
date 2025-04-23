@@ -105,10 +105,10 @@ class HomeInterface(ScrollArea):
         self.view = QWidget(self)
         self.vBoxLayout = QVBoxLayout(self.view)
 
-        self.__initWidget()
-        self.loadSamples()
+        self.__init_widget()
+        self.load_samples()
 
-    def __initWidget(self):
+    def __init_widget(self):
         self.view.setObjectName('view')
         self.setObjectName('homeInterface')
         StyleSheet.HOME_INTERFACE.apply(self)
@@ -122,7 +122,7 @@ class HomeInterface(ScrollArea):
         self.vBoxLayout.addWidget(self.banner)
         self.vBoxLayout.setAlignment(Qt.AlignTop)
 
-    def loadSamples(self):
+    def load_samples(self):
         """ 加载样本 """
 
         # 快速跳转
@@ -137,7 +137,7 @@ class HomeInterface(ScrollArea):
         quick_jump_view.addSampleCard(
             icon=":/gallery/images/controls/User.png",
             title="用户模板",
-            content="配置用户登录的账户模板",
+            content="配置登录设备的用户模板",
             routeKey="userInterface",
             index=0
         )

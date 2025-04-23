@@ -37,8 +37,8 @@ class CommandInterface(GalleryInterface):
         self.group_combo = ComboBox()
         self.group_combo.currentIndexChanged.connect(  # 绑定下拉框的值发生变化更新选中的模板数据
             lambda: self.update_select_data(self.group_combo.currentText()))
-        btn_new = PushButton("新建模板")
-        btn_del = PushButton("删除模板")
+        btn_new = PrimaryPushButton("新建模板")
+        btn_del = PrimaryPushButton("删除模板")
         group_layout.addWidget(self.group_combo, 6)
         group_layout.addWidget(btn_new, 1)
         group_layout.addWidget(btn_del, 1)
@@ -88,8 +88,8 @@ class CommandInterface(GalleryInterface):
                                              [self.inspection_list.item(i).text() for i in
                                               range(self.inspection_list.count())]))
 
-        inspection_btn_add = PrimaryPushButton("添加命令")
-        inspection_btn_remove = PrimaryPushButton("删除选中")
+        inspection_btn_add = PushButton("添加命令")
+        inspection_btn_remove = PushButton("删除选中")
         inspection_btn_add.clicked.connect(lambda: self.add_inspection_command())
         inspection_btn_remove.clicked.connect(lambda: self.remove_inspection_command())
         inspection_btn_layout = QHBoxLayout()
@@ -117,8 +117,8 @@ class CommandInterface(GalleryInterface):
                                              [self.backup_list.item(i).text() for i in
                                               range(self.backup_list.count())]))
 
-        backup_btn_add = PrimaryPushButton("添加命令")
-        backup_btn_remove = PrimaryPushButton("删除选中")
+        backup_btn_add = PushButton("添加命令")
+        backup_btn_remove = PushButton("删除选中")
         backup_btn_add.clicked.connect(lambda: self.add_backup_command())
         backup_btn_remove.clicked.connect(lambda: self.remove_backup_command())
         backup_btn_layout = QHBoxLayout()
@@ -142,33 +142,11 @@ class CommandInterface(GalleryInterface):
         self.update_group_combo(self.command_yaml.get_keys()[0])
 
     def add_config_group(self):
-        w = CustomMessageBox("新建命令模板", "输入命令模板名称",is_zh=True,parent=self.window())
+        w = CustomTemplatesMessageBox(self.command_yaml.get_keys(), parent=self.window())
         if w.exec():
-            if w.lineEdit.text() in self.command_yaml.get_keys():
-                InfoBar.error(
-                    title="新建模板",
-                    content="模板名称已存在！",
-                    orient=Qt.Horizontal,
-                    isClosable=False,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
-                return
-            if w.lineEdit.text() is None or w.lineEdit.text().strip()=="":
-                InfoBar.warning(
-                    title="新建模板",
-                    content="模板名称不能为空！",
-                    orient=Qt.Horizontal,
-                    isClosable=False,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
-                return
             new_data = {'device_type': 'huawei', 'inspection_commands': [], 'backup_commands': [], 'send_command': ''}
-            self.command_yaml.update([w.lineEdit.text()], new_data)
-            self.update_group_combo(w.lineEdit.text())
+            self.command_yaml.update([w.lineEdit.text().strip()], new_data)
+            self.update_group_combo(w.lineEdit.text().strip())
 
     def remove_config_group(self):
         if self.group_combo.count() <= 1:
@@ -183,42 +161,20 @@ class CommandInterface(GalleryInterface):
             )
             return
         if self.show_message_dialog("删除模板", "你确定？删了就回不来了哦！"):
-            self.command_yaml.delete(self.group_combo.text())
+            self.command_yaml.delete(self.group_combo.text().strip())
             self.update_group_combo(self.command_yaml.get_keys()[0])
 
     def add_inspection_command(self):
-        w = CustomMessageBox("添加巡检命令", "输入命令内容", parent=self.window())
+        w = CustomCommandMessageBox("添加巡检命令", parent=self.window())
         if w.exec():
-            if w.lineEdit.text() is None or w.lineEdit.text().strip()=="":
-                InfoBar.warning(
-                    title="添加巡检命令",
-                    content="命令不能为空！",
-                    orient=Qt.Horizontal,
-                    isClosable=False,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
-                return
-            self.inspection_list.addItem(w.lineEdit.text())
+            self.inspection_list.addItem(w.lineEdit.text().strip())
             self.command_yaml.update([self.group_combo.currentText(), "inspection_commands"],
                                      [self.inspection_list.item(i).text() for i in range(self.inspection_list.count())])
 
     def add_backup_command(self):
-        w = CustomMessageBox("添加备份命令", "输入命令内容", parent=self.window())
+        w = CustomCommandMessageBox("添加备份命令", parent=self.window())
         if w.exec():
-            if w.lineEdit.text() is None or w.lineEdit.text().strip()=="":
-                InfoBar.warning(
-                    title="添加备份命令",
-                    content="命令不能为空！",
-                    orient=Qt.Horizontal,
-                    isClosable=False,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
-                return
-            self.backup_list.addItem(w.lineEdit.text())
+            self.backup_list.addItem(w.lineEdit.text().strip())
             self.command_yaml.update([self.group_combo.currentText(), "backup_commands"],
                                      [self.backup_list.item(i).text() for i in range(self.backup_list.count())])
 
@@ -282,18 +238,14 @@ class CommandInterface(GalleryInterface):
             return False
 
 
-class CustomMessageBox(MessageBoxBase):
-    """ 文本输入消息框 """
+class CustomTemplatesMessageBox(MessageBoxBase):
+    """ 添加模板文本输入消息框 """
 
-    def __init__(self, title_text, edit_text, is_zh=False,parent=None):
+    def __init__(self, key_list, parent=None):
         super().__init__(parent)
-        self.title_label = SubtitleLabel(title_text, self)
+        self.title_label = SubtitleLabel("新建命令模板", self)
         self.lineEdit = LineEdit(self)
-        if not is_zh:
-            regex = QRegExp("[a-zA-Z0-9\\s]+")
-            validator = QRegExpValidator(regex)
-            self.lineEdit.setValidator(validator)
-        self.lineEdit.setPlaceholderText(edit_text)
+        self.lineEdit.setPlaceholderText("输入命令模板名称")
         self.lineEdit.setClearButtonEnabled(True)
 
         # 添加组件到布局
@@ -304,4 +256,74 @@ class CustomMessageBox(MessageBoxBase):
         self.yesButton.setText("确认")
         self.cancelButton.setText("取消")
 
+        self.yesButton.clicked.disconnect()
+        self.yesButton.clicked.connect(lambda: self.net_yes_button_clicked(key_list))
+
         self.widget.setMinimumWidth(360)
+
+    def net_yes_button_clicked(self,key_list):
+        if self.lineEdit.text() is not None and self.lineEdit.text().strip() != "" and self.validate():
+            if self.lineEdit.text().strip() in key_list:
+                InfoBar.error(
+                    title="新建命令模板",
+                    content="模板名称已存在！",
+                    orient=Qt.Horizontal,
+                    isClosable=False,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                return
+            else:
+                self.accept()
+        else:
+            InfoBar.error(
+                title="新建命令模板",
+                content="模板名称不能为空！",
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+
+
+class CustomCommandMessageBox(MessageBoxBase):
+    """ 添加命令文本输入消息框 """
+
+    def __init__(self, title_text, parent=None):
+        super().__init__(parent)
+        self.title_label = SubtitleLabel(title_text, self)
+        self.lineEdit = LineEdit(self)
+        regex = QRegExp("[a-zA-Z0-9\\s]+")
+        validator = QRegExpValidator(regex)
+        self.lineEdit.setValidator(validator)
+        self.lineEdit.setPlaceholderText("输入命令内容")
+        self.lineEdit.setClearButtonEnabled(True)
+
+        # 添加组件到布局
+        self.viewLayout.addWidget(self.title_label)
+        self.viewLayout.addWidget(self.lineEdit)
+
+        # 修改按钮文本
+        self.yesButton.setText("确认")
+        self.cancelButton.setText("取消")
+
+        self.yesButton.clicked.disconnect()
+        self.yesButton.clicked.connect(lambda: self.net_yes_button_clicked(title_text))
+
+        self.widget.setMinimumWidth(360)
+
+    def net_yes_button_clicked(self, title_text):
+        if self.lineEdit.text() is not None and self.lineEdit.text().strip() != "" and self.validate():
+            self.accept()
+        else:
+            InfoBar.error(
+                title=title_text,
+                content="命令不能为空！",
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
