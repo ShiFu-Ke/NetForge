@@ -10,6 +10,11 @@ NetForge
 pip install "PyQt-Fluent-Widgets[full]" -i https://pypi.org/simple/
 ```
 
+## 打包软件📦
+```shell
+pyinstaller --noconsole -w --icon=gallery/app/resource/images/logo.png NetForge.py
+```
+
 ## 引用👀
 
 NetForge 使用 [PyQt-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets) 框架。
