@@ -1,11 +1,12 @@
 # coding:utf-8
-from typing import List
+from typing import List, Tuple
 from urllib.response import addclosehook
 
+from PIL.Image import register_extension
 from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QAbstractItemView, QFormLayout, QDialog, QHeaderView, \
-    QTableWidgetItem, QTableWidget
+    QTableWidgetItem, QTableWidget, QLineEdit
 from netmiko.cli_tools.helpers import update_device_params
 from netmiko.ssh_dispatcher import CLASS_MAPPER_BASE
 from qfluentwidgets import LineEdit, ComboBox, PushButton, BodyLabel, CardWidget, ListWidget, PrimaryPushButton, \
@@ -13,80 +14,6 @@ from qfluentwidgets import LineEdit, ComboBox, PushButton, BodyLabel, CardWidget
 
 from .gallery_interface import GalleryInterface
 from ..util.yaml_util import YamlUtil
-
-
-class UserInterface(GalleryInterface):
-    """ 命令模板页面 """
-
-    def __init__(self, parent=None):
-        super().__init__(
-            title="用户模板",
-            subtitle='配置用户登录的账户模板',
-            parent=parent
-        )
-        self.setObjectName('userInterface')
-
-
-        # 用户列表
-        self.user_table=TableWidget()
-        self.user_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.user_table.verticalHeader().hide()
-        self.user_table.setBorderRadius(8)
-        self.user_table.setBorderVisible(True)
-        self.user_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.user_table.setColumnCount(2)
-        self.user_table.setHorizontalHeaderLabels(["模板名称","用户名"])
-
-        self.user_table.doubleClicked.connect(lambda :print(self.get_user_row_data(self.user_table.currentRow())))
-
-        # 按钮
-        btn_layout=QHBoxLayout()
-        btn_add=PrimaryPushButton("新建用户")
-        btn_edit=PrimaryPushButton("编辑用户")
-        btn_remove=PrimaryPushButton("删除用户")
-
-        btn_add.clicked.connect(lambda: self.add_user())
-        btn_edit.clicked.connect(lambda :self.edit_user())
-        btn_remove.clicked.connect(lambda: self.remove_user())
-
-        btn_layout.addStretch(1)
-        btn_layout.addWidget(btn_add,1)
-        btn_layout.addWidget(btn_edit,1)
-        btn_layout.addWidget(btn_remove,1)
-        btn_layout.addStretch(1)
-
-
-        # 添加组建到窗口
-        self.vBoxLayout.addWidget(self.user_table)
-        self.vBoxLayout.addLayout(btn_layout)
-
-    def add_user(self):
-        w = CustomMessageBox("新建用户", parent=self.window())
-        if w.exec():
-            print("点击了确定")
-
-    def edit_user(self):
-        w = CustomMessageBox("编辑用户", parent=self.window())
-        if w.exec():
-            print("点击了确定")
-    def remove_user(self):
-        pass
-
-    def add_user_row(self,data:list[str]):
-        new_row_index = self.user_table.rowCount()  # 获取当前总行数
-        self.user_table.insertRow(new_row_index)  # 在末尾插入新行
-        if len(data)==self.user_table.columnCount():
-            for col in range(len(data)):
-                item = QTableWidgetItem(data[col])
-                item.setTextAlignment(Qt.AlignCenter)
-                self.user_table.setItem(new_row_index, col, item)
-
-    def get_user_row_data(self, target_row):
-        row_data = []
-        for col in range(self.user_table.columnCount()):
-            item = self.user_table.item(target_row, col)
-            row_data.append(item.text() if item else "")
-        return row_data
 
 
 class CustomMessageBox(MessageBoxBase):
@@ -112,15 +39,18 @@ class CustomMessageBox(MessageBoxBase):
         self.password_lineEdit = LineEdit(self)
         regex = QRegExp("[a-zA-Z0-9\\s]+")
         validator = QRegExpValidator(regex)
+        self.password_lineEdit.setEchoMode(LineEdit.Password)
         self.password_lineEdit.setValidator(validator)
         self.password_lineEdit.setPlaceholderText("密码")
         self.password_lineEdit.setClearButtonEnabled(True)
 
-        # 如果有数据，则添加进布局
-        if data is not None:
+        # 如果有数据，则添加进布局,并禁止模板名称编辑,去点删除按钮
+        if data is not None and data[0] != "":
             self.templates_lineEdit.setText(data[0])
             self.user_lineEdit.setText(data[1])
             self.password_lineEdit.setText(data[2])
+            self.templates_lineEdit.setReadOnly(True)
+            self.templates_lineEdit.setClearButtonEnabled(False)
 
         # 添加组件到布局
         self.viewLayout.addWidget(self.title_label)
@@ -132,4 +62,146 @@ class CustomMessageBox(MessageBoxBase):
         self.yesButton.setText("确认")
         self.cancelButton.setText("取消")
 
+        # 修改确认按钮点击槽函数
+        self.yesButton.clicked.disconnect()
+        self.yesButton.clicked.connect(self.net_yes_button_clicked)
+
         self.widget.setMinimumWidth(360)
+
+    def net_yes_button_clicked(self):
+        is_not_null, msg = self.data_is_not_null()
+        if is_not_null and self.validate():
+            self.accept()
+        else:
+            InfoBar.error(
+                title="用户模板",
+                content=msg,
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+
+    def data_is_not_null(self) -> Tuple[bool, str]:
+        if self.templates_lineEdit.text() is None or self.templates_lineEdit.text().strip() == "":
+            return False, "模板名称不能为空"
+        if self.user_lineEdit.text() is None or self.user_lineEdit.text().strip() == "":
+            return False, "用户名不能为空"
+        if self.password_lineEdit.text() is None or self.password_lineEdit.text().strip() == "":
+            return False, "密码不能为空"
+        return True, ""
+
+
+class UserInterface(GalleryInterface):
+    """ 命令模板页面 """
+
+    def __init__(self, parent=None):
+        super().__init__(
+            title="用户模板",
+            subtitle='配置用户登录的账户模板',
+            parent=parent
+        )
+        self.setObjectName('userInterface')
+        # 加载配置文件
+        self.user_yaml = YamlUtil("app/config/auth_templates.yml")
+
+        # 用户列表
+        self.user_table = TableWidget()
+        self.user_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.user_table.verticalHeader().hide()
+        self.user_table.setBorderRadius(8)
+        self.user_table.setBorderVisible(True)
+        self.user_table.setEditTriggers(TableWidget.NoEditTriggers)
+        self.user_table.setColumnCount(2)
+        self.user_table.setHorizontalHeaderLabels(["模板名称", "用户名"])
+
+        self.user_table.doubleClicked.connect(lambda: self.edit_user())
+
+        # 按钮
+        btn_layout = QHBoxLayout()
+        btn_add = PrimaryPushButton("新建用户")
+        btn_edit = PrimaryPushButton("编辑用户")
+        btn_remove = PrimaryPushButton("删除用户")
+
+        btn_add.clicked.connect(lambda: self.add_user())
+        btn_edit.clicked.connect(lambda: self.edit_user())
+        btn_remove.clicked.connect(lambda: self.remove_user())
+
+        btn_layout.addStretch(1)
+        btn_layout.addWidget(btn_add, 1)
+        btn_layout.addWidget(btn_edit, 1)
+        btn_layout.addWidget(btn_remove, 1)
+        btn_layout.addStretch(1)
+
+        # 添加组建到窗口
+        self.vBoxLayout.addWidget(self.user_table)
+        self.vBoxLayout.addLayout(btn_layout)
+
+        self.update_user_table()
+
+    def add_user(self):
+        w = CustomMessageBox("新建用户", parent=self.window())
+        if w.exec():
+            self.user_yaml.update([w.templates_lineEdit.text(), "username"], w.user_lineEdit.text())
+            self.user_yaml.update([w.templates_lineEdit.text(), "password"], w.password_lineEdit.text())
+            self.update_user_table()
+
+    def edit_user(self):
+        item_index = self.user_table.currentRow()
+        if item_index < 0:
+            InfoBar.warning(
+                title="编辑用户",
+                content="请选择待修改模板",
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+            return
+        user_key = self.user_table.item(item_index, 0).text()
+        w = CustomMessageBox("编辑用户",
+                             data=[user_key, self.user_yaml.get([user_key, "username"], ""), ""],
+                             parent=self.window())
+        if w.exec():
+            self.user_yaml.update([w.templates_lineEdit.text(), "username"], w.user_lineEdit.text())
+            self.user_yaml.update([w.templates_lineEdit.text(), "password"], w.password_lineEdit.text())
+            self.update_user_table()
+
+    def remove_user(self):
+        item_index = self.user_table.currentRow()
+        if item_index < 0:
+            InfoBar.warning(
+                title="删除用户",
+                content="请选择待修改模板",
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+            return
+        self.user_yaml.delete(self.user_table.item(item_index, 0).text())
+        self.update_user_table()
+
+    def add_user_row(self, data: list[str]):
+        new_row_index = self.user_table.rowCount()  # 获取当前总行数
+        self.user_table.insertRow(new_row_index)  # 在末尾插入新行
+        if len(data) == self.user_table.columnCount():
+            for col in range(len(data)):
+                item = QTableWidgetItem(data[col])
+                item.setTextAlignment(Qt.AlignCenter)
+                self.user_table.setItem(new_row_index, col, item)
+
+    def get_user_row_data(self, target_row):
+        row_data = []
+        for col in range(self.user_table.columnCount()):
+            item = self.user_table.item(target_row, col)
+            row_data.append(item.text() if item else "")
+        return row_data
+
+    def update_user_table(self):
+        self.user_table.setRowCount(0)
+        for i in self.user_yaml.get_keys():
+            self.add_user_row([i, self.user_yaml.get([i, "username"])])
