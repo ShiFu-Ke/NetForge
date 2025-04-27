@@ -23,7 +23,7 @@ class UserInterface(GalleryInterface):
         )
         self.setObjectName('userInterface')
         # 加载配置文件
-        self.user_yaml = YamlUtil("app/config/auth_templates.yml")
+        self.user_yaml = YamlUtil("app/config/user_templates.yml")
 
         # 用户列表
         self.user_table = TableWidget()
