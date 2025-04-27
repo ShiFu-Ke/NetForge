@@ -1,23 +1,17 @@
 # coding: utf-8
-import sys
 
-from PyQt5.QtCore import QSize, QTimer
+from PyQt5.QtCore import QSize, QTimer, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
+from qfluentwidgets import FluentIcon as FIF, InfoBar, InfoBarPosition
+from qfluentwidgets import (NavigationItemPosition, FluentWindow, SplashScreen, SystemThemeListener, isDarkTheme)
 
-from qfluentwidgets import (NavigationItemPosition, FluentWindow, SplashScreen, SystemThemeListener, isDarkTheme,
-                            setThemeColor)
-from qfluentwidgets import FluentIcon as FIF
-from qframelesswindow import StandardTitleBar
-from qframelesswindow.utils import getSystemAccentColor
-
-from .gallery_interface import GalleryInterface
 from .command_interface import CommandInterface
-from .user_interface import UserInterface
+from .gallery_interface import GalleryInterface
 from .home_interface import HomeInterface
 from .setting_interface import SettingInterface
+from .user_interface import UserInterface
 from ..common.config import cfg
-from ..common.icon import Icon
 from ..common.signal_bus import signalBus
 
 from ..common import resource
@@ -62,8 +56,7 @@ class MainWindow(FluentWindow):
         pos = NavigationItemPosition.SCROLL
 
         self.addSubInterface(self.commandInterface, FIF.COMMAND_PROMPT, "命令模板", pos)
-        self.addSubInterface(self.userInterface, FIF.PEOPLE, "用户模板",pos)
-
+        self.addSubInterface(self.userInterface, FIF.PEOPLE, "用户模板", pos)
 
         # 将自定义小部件添加到底部
 

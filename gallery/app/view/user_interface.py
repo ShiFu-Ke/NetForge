@@ -8,6 +8,7 @@ from qfluentwidgets import LineEdit, PrimaryPushButton, MessageBoxBase, Subtitle
     InfoBarPosition, TableWidget, PasswordLineEdit
 
 from .gallery_interface import GalleryInterface
+from ..util.encryption_util import Encryption
 from ..util.yaml_util import YamlUtil
 
 
@@ -72,7 +73,8 @@ class UserInterface(GalleryInterface):
                     parent=self
                 )
             self.user_yaml.update([w.templates_lineEdit.text().strip(), "username"], w.user_lineEdit.text().strip())
-            self.user_yaml.update([w.templates_lineEdit.text().strip(), "password"], w.password_lineEdit.text().strip())
+            self.user_yaml.update([w.templates_lineEdit.text().strip(), "password"],
+                                  Encryption.encrypt(w.password_lineEdit.text().strip()))
             self.update_user_table()
 
     def edit_user(self):
@@ -94,7 +96,8 @@ class UserInterface(GalleryInterface):
                              parent=self.window())
         if w.exec():
             self.user_yaml.update([w.templates_lineEdit.text().strip(), "username"], w.user_lineEdit.text().strip())
-            self.user_yaml.update([w.templates_lineEdit.text().strip(), "password"], w.password_lineEdit.text().strip())
+            self.user_yaml.update([w.templates_lineEdit.text().strip(), "password"],
+                                  Encryption.encrypt(w.password_lineEdit.text().strip()))
             self.update_user_table()
 
     def remove_user(self):
@@ -171,7 +174,7 @@ class CustomMessageBox(MessageBoxBase):
         self.password_lineEdit.setPlaceholderText("密码")
         self.password_lineEdit.setClearButtonEnabled(True)
 
-        # 如果有数据，则添加进布局,并禁止模板名称编辑,去点删除按钮
+        # 如果有数据，则添加进布局,并禁止模板名称编辑,去掉删除按钮
         if data is not None and data[0] != "":
             self.templates_lineEdit.setText(data[0])
             self.user_lineEdit.setText(data[1])

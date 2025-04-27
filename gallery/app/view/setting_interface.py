@@ -1,11 +1,10 @@
 # coding:utf-8
-from typing import Tuple
 
 from PyQt5.QtCore import Qt, QUrl, QRegExp
-from PyQt5.QtGui import QDesktopServices, QPixmap, QRegExpValidator
-from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout
-from qfluentwidgets import FluentIcon as FIF, InfoBarPosition, FlyoutView, PushButton, FlyoutAnimationType, Flyout, \
-    MessageBoxBase, SubtitleLabel, LineEdit, PasswordLineEdit, PrimaryPushButton
+from PyQt5.QtGui import QDesktopServices, QRegExpValidator
+from PyQt5.QtWidgets import QWidget, QLabel
+from qfluentwidgets import FluentIcon as FIF, InfoBarPosition, FlyoutView, FlyoutAnimationType, Flyout, \
+    MessageBoxBase, SubtitleLabel, PasswordLineEdit, PrimaryPushButton
 from qfluentwidgets import InfoBar
 from qfluentwidgets import (SettingCardGroup, SwitchSettingCard, OptionsSettingCard, HyperlinkCard,
                             PrimaryPushSettingCard, ScrollArea,
@@ -178,8 +177,8 @@ class SettingInterface(ScrollArea):
         self.aboutCard.clicked.connect(lambda: self.check_update())
 
     def check_update(self):
-        is_update = UpdateUtil.is_update()
-        if is_update is None:
+        software_msg = UpdateUtil.software_mag()
+        if software_msg is None:
             InfoBar.warning(
                 title="检查更新",
                 content="检查更新失败，请检查你的网络！",
@@ -187,32 +186,68 @@ class SettingInterface(ScrollArea):
                 isClosable=False,
                 position=InfoBarPosition.TOP,
                 duration=2000,
-                parent=self
+                parent=self.window()
             )
-            return
-        if is_update:
-            self.show_complex_flyout()
+        elif VERSION == software_msg["version"]:
+            InfoBar.success(
+                title="检查更新",
+                content="已更新至最新版本！",
+                orient=Qt.Horizontal,
+                isClosable=False,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self.window()
+            )
+        else:
+            view = FlyoutView(
+                title="发现新版本",
+                content='\n'.join(f"{i + 1}. {item}" for i, item in enumerate(software_msg["msg"])),
+                image=':gallery/images/header1.png',
+                isClosable=True
+            )
 
-    def show_complex_flyout(self):
-        view = FlyoutView(
-            title="发现新版本",
-            content="更新内容：\n1..\n2..",
-            image=':gallery/images/header1.png',
-            isClosable=True
-        )
-        # 修改关闭按钮槽函数
-        view.closeButton.clicked.disconnect()
-        view.closeButton.clicked.connect(view.close)
-        # add button to view
+            # 修改关闭按钮槽函数
+            view.closeButton.clicked.disconnect()
+            view.closeButton.clicked.connect(view.close)
 
-        download_button = PrimaryPushButton('新版本下载')
-        download_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(RELEASE_URL)))
-        view.addWidget(download_button, align=Qt.AlignRight)
+            # 添加按钮
+            download_button = PrimaryPushButton('下载新版本')
+            download_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(RELEASE_URL)))
+            view.addWidget(download_button, align=Qt.AlignRight)
 
-        # adjust layout (optional)
-        view.widgetLayout.insertSpacing(1, 5)
-        view.widgetLayout.insertSpacing(0, 5)
-        view.widgetLayout.addSpacing(5)
+            # adjust layout (optional)
+            view.widgetLayout.insertSpacing(1, 5)
+            view.widgetLayout.insertSpacing(0, 5)
+            view.widgetLayout.addSpacing(5)
 
-        # show view
-        Flyout.make(view, target=self.window(), parent=self, aniType=FlyoutAnimationType.PULL_UP)
+            # 显示弹窗
+            Flyout.make(view, target=self.window(), parent=self, aniType=FlyoutAnimationType.PULL_UP)
+
+
+class CustomMessageBox(MessageBoxBase):
+    """ 文本输入消息框 """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.title_label = SubtitleLabel("设置加密", self)
+
+        self.password_lineEdit = PasswordLineEdit(self)
+        regex = QRegExp("[a-zA-Z0-9\\s]+")
+        validator = QRegExpValidator(regex)
+        self.password_lineEdit.setValidator(validator)
+        self.password_lineEdit.setPlaceholderText("密码")
+        self.password_lineEdit.setClearButtonEnabled(True)
+
+        # 添加组件到布局
+        self.viewLayout.addWidget(self.title_label)
+        self.viewLayout.addWidget(self.password_lineEdit)
+
+        # 修改按钮文本
+        self.yesButton.setText("确认")
+        self.cancelButton.setText("取消")
+
+        # 修改确认按钮点击槽函数
+        self.yesButton.clicked.disconnect()
+        self.yesButton.clicked.connect(self.net_yes_button_clicked)
+
+        self.widget.setMinimumWidth(360)

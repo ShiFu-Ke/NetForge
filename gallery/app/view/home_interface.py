@@ -1,16 +1,14 @@
 # coding:utf-8
-from operator import index
 
 from PyQt5.QtCore import Qt, QRectF
 from PyQt5.QtGui import QPixmap, QPainter, QColor, QBrush, QPainterPath, QLinearGradient
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+from qfluentwidgets import ScrollArea, isDarkTheme, FluentIcon
 
-from qfluentwidgets import ScrollArea, isDarkTheme, FluentIcon, InfoBarPosition, InfoBar
-from ..common.config import cfg, HELP_URL, REPO_URL, EXAMPLE_URL, FEEDBACK_URL
-from ..common.icon import Icon, FluentIconBase
+from ..common.config import HELP_URL, REPO_URL, EXAMPLE_URL, FEEDBACK_URL
+from ..common.style_sheet import StyleSheet
 from ..components.link_card import LinkCardView
 from ..components.sample_card import SampleCardView
-from ..common.style_sheet import StyleSheet
 
 
 class BannerWidget(QWidget):
@@ -22,7 +20,7 @@ class BannerWidget(QWidget):
 
         self.vBoxLayout = QVBoxLayout(self)
         self.galleryLabel = QLabel('NetForge', self)
-        self.banner = QPixmap(':/gallery/images/header1.png')
+        self.banner = QPixmap(':/gallery/images/header.png')
         self.linkCardView = LinkCardView(self)
 
         self.galleryLabel.setObjectName('galleryLabel')
