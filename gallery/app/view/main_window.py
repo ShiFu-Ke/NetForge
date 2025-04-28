@@ -6,13 +6,13 @@ from PyQt5.QtWidgets import QApplication
 from qfluentwidgets import FluentIcon as FIF, InfoBar, InfoBarPosition
 from qfluentwidgets import (NavigationItemPosition, FluentWindow, SplashScreen, SystemThemeListener, isDarkTheme)
 
+from .run_interface import RunInterface
 from .device_interface import DeviceInterface
 from .command_interface import CommandInterface
 from .user_interface import UserInterface
 from .setting_interface import SettingInterface
 from .gallery_interface import GalleryInterface
 from .home_interface import HomeInterface
-
 
 from ..common.config import cfg
 from ..common.signal_bus import signalBus
@@ -31,7 +31,8 @@ class MainWindow(FluentWindow):
 
         # 创建子界面
         self.homeInterface = HomeInterface(self)
-        self.deviceInterface=DeviceInterface()
+        self.runInterface = RunInterface()
+        self.deviceInterface = DeviceInterface()
         self.commandInterface = CommandInterface(self)
         self.userInterface = UserInterface(self)
         self.settingInterface = SettingInterface(self)
@@ -59,6 +60,7 @@ class MainWindow(FluentWindow):
 
         pos = NavigationItemPosition.SCROLL
 
+        self.addSubInterface(self.runInterface, FIF.PLAY, "运行命令", pos)
         self.addSubInterface(self.deviceInterface, FIF.CONNECT, "设备组", pos)
         self.addSubInterface(self.commandInterface, FIF.COMMAND_PROMPT, "命令模板", pos)
         self.addSubInterface(self.userInterface, FIF.PEOPLE, "用户模板", pos)
@@ -67,6 +69,9 @@ class MainWindow(FluentWindow):
 
         self.addSubInterface(
             self.settingInterface, FIF.SETTING, "设置", NavigationItemPosition.BOTTOM)
+
+        # 连接信号
+        self.deviceInterface.send_to_run_page_signal.connect(self.runInterface.update_combo)
 
     def initWindow(self):
         self.resize(960, 780)

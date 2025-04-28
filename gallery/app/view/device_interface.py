@@ -1,20 +1,18 @@
 # coding:utf-8
-from typing import Tuple
-import ipaddress
 
-from PyQt5.QtCore import Qt, QRegExp
+from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QHBoxLayout, QHeaderView, QTableWidgetItem
 from qfluentwidgets import LineEdit, PrimaryPushButton, MessageBoxBase, SubtitleLabel, MessageBox, InfoBar, \
-    InfoBarPosition, TableWidget, PasswordLineEdit, ComboBox, BodyLabel
+    InfoBarPosition, TableWidget, ComboBox
 
 from .gallery_interface import GalleryInterface
-from ..util.encryption_util import Encryption
 from ..util.yaml_util import YamlUtil
 
 
 class DeviceInterface(GalleryInterface):
     """ 设备组页面 """
+    send_to_run_page_signal = pyqtSignal(list)
 
     def __init__(self, parent=None):
         super().__init__(
@@ -24,8 +22,7 @@ class DeviceInterface(GalleryInterface):
         )
         self.setObjectName('deviceInterface')
         # 加载配置文件
-        default_data = {"devices": []}
-        self.device_yaml = YamlUtil("app/config/device_templates.yml", default_data)
+        self.device_yaml = YamlUtil("app/config/device_templates.yml", {"devices": []})
 
         # 配置组管理
         group_layout = QHBoxLayout()
@@ -88,14 +85,14 @@ class DeviceInterface(GalleryInterface):
     def update_group_combo(self, current_text):
         self.group_combo.clear()
         device_group = self.device_yaml.get_keys()
-        self.group_combo.addItems(device_group)  # 添加数据
+        self.group_combo.addItems(device_group)  # 添加列表至设备组下拉框
+        self.send_to_run_page_signal.emit(device_group)  # 添加列表至运行页面
         self.group_combo.setCurrentText(current_text)  # 选中第一个
         self.update_device_table(current_text)
 
     def update_device_table(self, device_group: str):
         if device_group not in self.device_yaml.get_keys():
             return
-
         # 修改设备列表
         device_msg = self.device_yaml.get([device_group])
         self.device_table.setRowCount(0)

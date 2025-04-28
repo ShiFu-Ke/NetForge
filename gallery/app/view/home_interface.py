@@ -126,6 +126,13 @@ class HomeInterface(ScrollArea):
         # 快速跳转
         quick_jump_view = SampleCardView('快速跳转', self.view)
         quick_jump_view.addSampleCard(
+            icon=":/gallery/images/controls/Run.png",
+            title="运行命令",
+            content="运行预设的配置命令",
+            routeKey="runInterface",
+            index=0
+        )
+        quick_jump_view.addSampleCard(
             icon=":/gallery/images/controls/Device.png",
             title="设备组",
             content="配置需要执行操作的设备组",
