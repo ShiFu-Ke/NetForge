@@ -205,27 +205,27 @@ class CommandInterface(GalleryInterface):
         self.group_combo.setCurrentText(current_text)  # 选中第一个
         self.update_select_data(current_text)
 
-    def update_select_data(self, command_templates: str):
-        if command_templates not in self.command_yaml.get_keys():
+    def update_select_data(self, command_template: str):
+        if command_template not in self.command_yaml.get_keys():
             return
 
         # 修改硬件类型下拉框选项
         self.device_type_combo.setCurrentText(
-            self.command_yaml.get([command_templates, "device_type"]))
+            self.command_yaml.get([command_template, "device_type"]))
 
         # 修改结束符号
         self.send_command_edit.setText(
-            self.command_yaml.get([command_templates, "send_command"]))
+            self.command_yaml.get([command_template, "send_command"]))
 
         # 修改巡检命令模板
         self.inspection_list.clear()
-        inspection_commands = self.command_yaml.get([command_templates, "inspection_commands"])
+        inspection_commands = self.command_yaml.get([command_template, "inspection_commands"])
         if type(inspection_commands) is list:
             self.inspection_list.addItems(inspection_commands)
 
         # 修改备份命令模板
         self.backup_list.clear()
-        backup_commands = self.command_yaml.get([command_templates, "backup_commands"])
+        backup_commands = self.command_yaml.get([command_template, "backup_commands"])
         if type(backup_commands) is list:
             self.backup_list.addItems(backup_commands)
 

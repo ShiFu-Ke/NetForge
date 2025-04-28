@@ -82,7 +82,7 @@ class UserInterface(GalleryInterface):
         if item_index < 0:
             InfoBar.warning(
                 title="编辑用户模板",
-                content="请选择待修改用户模板",
+                content="请选择待编辑用户模板",
                 orient=Qt.Horizontal,
                 isClosable=False,
                 position=InfoBarPosition.TOP,
