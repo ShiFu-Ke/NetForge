@@ -1,16 +1,16 @@
 # coding:utf-8
 import logging
 import os
-from random import random
-from time import sleep
-from typing import Tuple
+import threading
 from logging import Handler
+from time import sleep
+
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
-from PyQt5.QtCore import Qt, QRegExp, QStandardPaths
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
-from qfluentwidgets import LineEdit, PrimaryPushButton, MessageBoxBase, SubtitleLabel, MessageBox, InfoBar, \
-    InfoBarPosition, TableWidget, PasswordLineEdit, ComboBox, PlainTextEdit, StrongBodyLabel, PushButton
+from PyQt5.QtCore import Qt, QStandardPaths
+from PyQt5.QtWidgets import QHBoxLayout, QFileDialog
+from netmiko import ConnectHandler, NetMikoTimeoutException, NetMikoAuthenticationException
+from qfluentwidgets import LineEdit, PrimaryPushButton, MessageBox, InfoBar, \
+    InfoBarPosition, ComboBox, PlainTextEdit, PushButton, StateToolTip
 
 from .gallery_interface import GalleryInterface
 from ..util.encryption_util import Encryption
@@ -28,19 +28,25 @@ class RunInterface(GalleryInterface):
         )
         self.setObjectName('runInterface')
 
+        # 定义成员变量
+        self.save_path = None
+        self.run_thread = None
+        self.run_thread_flag = False
+        self.stop_state_tooltip = None
+
         # 设备组管理
         group_layout = QHBoxLayout()
         group_layout.setSpacing(10)
         self.group_combo = ComboBox()
         btn_run = PrimaryPushButton("开始运行")
-        btn_stop = PrimaryPushButton("停止运行")
+        btn_stop = PrimaryPushButton("中止运行")
         group_layout.addWidget(self.group_combo, 6)
         group_layout.addWidget(btn_run, 1)
         group_layout.addWidget(btn_stop, 1)
         btn_run.clicked.connect(lambda: self.run())
         btn_stop.clicked.connect(lambda: self.stop())
 
-        # 保存路劲组件
+        # 保存路径组件
         dir_layout = QHBoxLayout()
         dir_layout.setSpacing(10)
         self.dir_lineEdit = LineEdit()
@@ -54,6 +60,7 @@ class RunInterface(GalleryInterface):
         # 日志显示文本框
         self.log_edit = PlainTextEdit()
         self.log_edit.setReadOnly(True)
+        self.log_edit.setLineWrapMode(PlainTextEdit.NoWrap)
 
         # 添加至总布局
         self.vBoxLayout.addLayout(group_layout)
@@ -64,6 +71,9 @@ class RunInterface(GalleryInterface):
         self.update_combo(YamlUtil("app/config/device_templates.yml", {"devices": []}).get_keys())
 
     def run(self):
+        if self.run_thread and self.run_thread.is_alive():
+            self.error_info("开始运行", "请勿重复运行！")
+            return
         if not os.path.exists(self.dir_lineEdit.text()):
             if self.show_message_dialog("开始运行", "保存目录不存在，是否重新选择？"):
                 self.choose_dir()
@@ -71,28 +81,140 @@ class RunInterface(GalleryInterface):
                 return
         if os.path.exists(self.dir_lineEdit.text()):
             self.log_edit.clear()
-            self.run_command()
+            self.run_thread_flag = False
+            self.run_thread = threading.Thread(target=lambda: self.run_command(), daemon=True)
+            self.run_thread.start()
 
     def stop(self):
-        pass
+        if self.run_thread and self.run_thread.is_alive():
+            if not self.run_thread_flag:
+                self.run_thread_flag = True
+                self.stop_state_tooltip = StateToolTip("中止运行", "正在中止运行~", self.window())
+                self.stop_state_tooltip.move(self.stop_state_tooltip.getSuitablePos())
+                self.stop_state_tooltip.show()
+            else:
+                self.error_info("中止运行", "正在中止运行！")
+        else:
+            self.error_info("中止运行", "未开始运行！")
 
     def update_combo(self, data):
         self.group_combo.clear()
         self.group_combo.addItems(data)
 
     def run_command(self):
+        user_templates = YamlUtil("app/config/user_templates.yml")
+        command_templates = YamlUtil("app/config/command_templates.yml")
+        device_list = YamlUtil("app/config/device_templates.yml", {"devices": []}).get([self.group_combo.text()])
+        self.setup_logging()
+        for i in device_list:
+            command = command_templates.data[i["command_template"]]
+            user = user_templates.data[i["user_template"]]
+            device = {
+                "device_name": i["host"] if i["device_name"] == "" else i["device_name"],
+                "host": i["host"],
+                "port": i["port"],
+                "username": user['username'],
+                "password": Encryption.decrypt(user['password']),
+                "device_type": command["device_type"],
+                "inspection_commands": command["inspection_commands"],
+                "backup_commands": command["backup_commands"],
+                "send_command": command["send_command"],
+            }
+            self.process_device(device)
+            if self.run_thread_flag:
+                logging.info(f"{'=' * 15}已中止运行！{'=' * 15}")
+                self.stop_state_tooltip.setContent("已中止运行！")
+                self.stop_state_tooltip.setState(True)
+                sleep(2)
+                self.stop_state_tooltip.closedSignal.emit()
+                self.stop_state_tooltip.hide()
+                self.stop_state_tooltip = None
+                return
+        logging.info(f"{'=' * 15}所有操作已完成！{'=' * 15}")
+
+    def process_device(self, device):
+        """处理单个设备"""
+        logging.info(f"{'=' * 15} 开始处理设备: {device["device_name"]}({device["host"]}) {'=' * 15}")
         try:
-            device_group = self.group_combo.currentText()
-            device_list = YamlUtil("app/config/device_templates.yml", {"devices": []}).get_keys()
-            self.setup_logging()
+            # 建立连接
+            conn_params = {
+                "device_type": device['device_type'],
+                "host": device["host"],
+                "port": device["port"],
+                "username": device["username"],
+                "password": device["password"],
+                "timeout": 30,
+                "fast_cli": False
+            }
+            with ConnectHandler(**conn_params) as conn:
+                # Cisco特权模式处理
+                if device['device_type'] == 'cisco_ios':
+                    conn.enable()
+
+                # 执行巡检命令
+                self.execute_inspection(conn, device['inspection_commands'], device["host"], device['send_command'])
+                if self.run_thread_flag:
+                    return
+                    # 执行备份命令
+                backup_data = self.execute_inspection_config_back(conn, device['backup_commands'],
+                                                                  device['send_command'])
+                if self.run_thread_flag:
+                    return
+
+                # 保存配置
+                self.save_backup(
+                    self.save_path, device['device_name'] + ".log", backup_data, device["host"])
+                if self.run_thread_flag:
+                    return
+
+        except (NetMikoAuthenticationException, NetMikoTimeoutException) as e:
+            logging.error(f"连接失败 [{type(e).__name__}]: {str(e)}\n")
         except Exception as e:
-            print(e)
+            logging.error(f"未知错误: {str(e)}\n")
+
+    def execute_inspection(self, conn, commands, ip, expect_string):
+        """执行巡检命令序列"""
+        for cmd in commands:
+            if self.run_thread_flag:
+                return
+            try:
+                output = conn.send_command(cmd, expect_string=expect_string)
+                if output.strip() != "":
+                    logging.info(f"{ip} 执行 [{cmd}] 成功\n输出内容:\n{output}\n{'-' * 80}")
+                else:
+                    logging.info(f"{ip} 执行 [{cmd}] 成功，无输出内容。")
+            except Exception as e:
+                logging.warning(f"命令执行失败 [{cmd}]: {str(e)}")
+
+    def execute_inspection_config_back(self, conn, commands, expect_string):
+        """执行巡检命令序列"""
+        data = ""
+        for cmd in commands:
+            if self.run_thread_flag:
+                return ""
+            try:
+                output = conn.send_command(cmd, expect_string=expect_string)
+                data += f"执行 {cmd}:\n{output}\n\n\n"
+            except Exception as e:
+                logging.warning(f"命令执行失败 [{cmd}]: {str(e)}")
+        return data
+
+    @staticmethod
+    def save_backup(path, filename, data, ip):
+        """保存配置文件"""
+        try:
+            full_path = os.path.join(path, filename).replace("/", "\\")
+            with open(full_path, 'w', encoding='utf-8') as f:
+                f.write(data)
+            logging.info(f"{ip} 配置已保存至: {full_path}\n")
+        except IOError as e:
+            logging.error(f"文件保存失败: {str(e)}\n")
 
     def setup_logging(self):
         """配置双日志输出（文件+PlainTextEdit组件）"""
-        print(os.path.join(self.dir_lineEdit.text(), self.group_combo.currentText()))
-        os.makedirs(os.path.join(self.dir_lineEdit.text(), self.group_combo.currentText()), exist_ok=True)
-        log_file = os.path.join(self.dir_lineEdit.text(), self.group_combo.currentText(), '巡检日志.log')
+        self.save_path = os.path.join(self.dir_lineEdit.text(), self.group_combo.currentText())
+        os.makedirs(self.save_path, exist_ok=True)
+        log_file = os.path.join(self.save_path, '巡检日志.log')
 
         # 清除默认配置
         logging.root.handlers = []
@@ -113,6 +235,9 @@ class RunInterface(GalleryInterface):
         root_logger.addHandler(text_edit_handler)
 
     def choose_dir(self):
+        if self.run_thread and self.run_thread.is_alive():
+            self.error_info("修改保存目录", "正在运行，请完成后再修改！")
+            return
         desktop_path = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
         folder_path = QFileDialog.getExistingDirectory(self, "修改保存目录", desktop_path)
         if folder_path:

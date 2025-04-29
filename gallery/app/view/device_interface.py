@@ -46,7 +46,7 @@ class DeviceInterface(GalleryInterface):
         self.device_table.setBorderVisible(True)
         self.device_table.setEditTriggers(TableWidget.NoEditTriggers)
         self.device_table.setColumnCount(5)
-        self.device_table.setHorizontalHeaderLabels(["ip地址", "端口号", "设备名称", "命令模板", "用户模板"])
+        self.device_table.setHorizontalHeaderLabels(["设备地址", "端口号", "设备名称", "命令模板", "用户模板"])
 
         self.device_table.doubleClicked.connect(lambda: self.edit_device())
 
@@ -98,7 +98,7 @@ class DeviceInterface(GalleryInterface):
         self.device_table.setRowCount(0)
         for i in device_msg:
             self.add_device_row(
-                [i.get("ip"), i.get("port"), i.get("device_name"), i.get("command_template"), i.get("user_template")])
+                [i.get("host"), i.get("port"), i.get("device_name"), i.get("command_template"), i.get("user_template")])
 
     def add_device_group(self):
         w = CustomDevicesMessageBox(self.device_yaml.get_keys(), parent=self.window())
@@ -121,7 +121,7 @@ class DeviceInterface(GalleryInterface):
         w = CustomDeviceMessageBox("添加设备", parent=self.window())
         if w.exec():
             data = self.device_yaml.get([device_group])
-            new_data = {"ip": w.ip_lineEdit.text().strip(), "port": w.port_lineEdit.text().strip(),
+            new_data = {"host": w.host_lineEdit.text().strip(), "port": w.port_lineEdit.text().strip(),
                         "device_name": w.device_name_lineEdit.text().strip(),
                         "command_template": w.command_combo.currentText().strip(),
                         "user_template": w.user_combo.currentText().strip()}
@@ -151,7 +151,7 @@ class DeviceInterface(GalleryInterface):
         w = CustomDeviceMessageBox("编辑设备", data=data, parent=self.window())
         if w.exec():
             data = self.device_yaml.get([device_group])
-            new_data = {"ip": w.ip_lineEdit.text().strip(), "port": w.port_lineEdit.text().strip(),
+            new_data = {"host": w.host_lineEdit.text().strip(), "port": w.port_lineEdit.text().strip(),
                         "device_name": w.device_name_lineEdit.text().strip(),
                         "command_template": w.command_combo.currentText().strip(),
                         "user_template": w.user_combo.currentText().strip()}
@@ -273,15 +273,15 @@ class CustomDeviceMessageBox(MessageBoxBase):
         self.title = title
         self.title_label = SubtitleLabel(self.title, self)
 
-        # ip地址
-        self.ip_lineEdit = LineEdit(self)
+        # 设备地址
+        self.host_lineEdit = LineEdit(self)
         ipv4_regex = r"((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])"
         ipv6_regex = r"(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?::(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4})?)"
         regex = QRegExp(f"^({ipv4_regex}|{ipv6_regex})$")
         validator = QRegExpValidator(regex)
-        self.ip_lineEdit.setValidator(validator)
-        self.ip_lineEdit.setPlaceholderText("ip地址（必填）")
-        self.ip_lineEdit.setClearButtonEnabled(True)
+        self.host_lineEdit.setValidator(validator)
+        self.host_lineEdit.setPlaceholderText("设备地址（必填）")
+        self.host_lineEdit.setClearButtonEnabled(True)
 
         # 端口号
         self.port_lineEdit = LineEdit(self)
@@ -306,7 +306,7 @@ class CustomDeviceMessageBox(MessageBoxBase):
 
         # 修改值
         if data is not None:
-            self.ip_lineEdit.setText(data[0])
+            self.host_lineEdit.setText(data[0])
             self.port_lineEdit.setText(data[1])
             self.device_name_lineEdit.setText(data[2])
             if data[3] != "":
@@ -316,7 +316,7 @@ class CustomDeviceMessageBox(MessageBoxBase):
 
         # 添加组件到布局
         self.viewLayout.addWidget(self.title_label)
-        self.viewLayout.addWidget(self.ip_lineEdit)
+        self.viewLayout.addWidget(self.host_lineEdit)
         self.viewLayout.addWidget(self.port_lineEdit)
         self.viewLayout.addWidget(self.device_name_lineEdit)
         self.viewLayout.addWidget(self.command_combo)
@@ -332,10 +332,10 @@ class CustomDeviceMessageBox(MessageBoxBase):
         self.widget.setMinimumWidth(360)
 
     def net_yes_button_clicked(self):
-        if self.ip_lineEdit is None or self.ip_lineEdit.text().strip() == "":
+        if self.host_lineEdit is None or self.host_lineEdit.text().strip() == "":
             InfoBar.error(
                 title=self.title,
-                content="设备ip地址不能为空！",
+                content="设备地址不能为空！",
                 orient=Qt.Horizontal,
                 isClosable=False,
                 position=InfoBarPosition.TOP,
