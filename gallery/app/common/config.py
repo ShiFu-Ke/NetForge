@@ -25,12 +25,12 @@ class Config(QConfig):
     checkUpdateAtStartUp = ConfigItem("Update", "CheckUpdateAtStartUp", True, BoolValidator())
 
 
-YEAR = 2023
+YEAR = 2025
 AUTHOR = "Morbid"
-VERSION = "v0.0.1"
-HELP_URL = "https://space.bilibili.com/660801861"
+VERSION = "v1.0.0"
+HELP_URL = "https://www.baidu.com/"
 REPO_URL = "https://github.com/ShiFu-Ke/NetForge"
-EXAMPLE_URL = "https://www.bilibili.com/"
+EXAMPLE_URL = "https://www.baidu.com/"
 FEEDBACK_URL = "https://github.com/ShiFu-Ke/NetForge/issues"
 RELEASE_URL = "https://github.com/ShiFu-Ke/NetForge/releases/latest"
 

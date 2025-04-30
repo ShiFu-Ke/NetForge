@@ -1,15 +1,13 @@
 # coding:utf-8
-from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QEvent
+from PyQt5.QtCore import Qt, QUrl, QEvent
 from PyQt5.QtGui import QDesktopServices, QPainter, QPen, QColor
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QFrame
-
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
 from qfluentwidgets import (ScrollArea, PushButton, ToolButton, FluentIcon,
-                            isDarkTheme, IconWidget, Theme, ToolTipFilter, TitleLabel, CaptionLabel,
+                            isDarkTheme, IconWidget, ToolTipFilter, TitleLabel, CaptionLabel,
                             StrongBodyLabel, BodyLabel, toggleTheme, InfoBar, InfoBarPosition)
-from ..common.config import cfg, FEEDBACK_URL, HELP_URL, EXAMPLE_URL
-from ..common.icon import Icon
+
+from ..common.config import FEEDBACK_URL
 from ..common.style_sheet import StyleSheet
-from ..common.signal_bus import signalBus
 
 
 class SeparatorWidget(QWidget):

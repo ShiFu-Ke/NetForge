@@ -106,6 +106,7 @@ class RunInterface(GalleryInterface):
         command_templates = YamlUtil("app/config/command_templates.yml")
         device_list = YamlUtil("app/config/device_templates.yml", {"devices": []}).get([self.group_combo.text()])
         self.setup_logging()
+        logging.info(f"{'=' * 15}开始执行操作！{'=' * 15}")
         for i in device_list:
             command = command_templates.data[i["command_template"]]
             user = user_templates.data[i["user_template"]]

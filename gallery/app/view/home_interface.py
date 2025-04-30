@@ -34,28 +34,28 @@ class BannerWidget(QWidget):
         self.linkCardView.addCard(
             ':/gallery/images/logo.png',
             '开始',
-            '应用程序开发选项和示例概述。',
+            '帮助您快速了解软件功能。',
             HELP_URL
         )
 
         self.linkCardView.addCard(
             FluentIcon.GITHUB,
             '项目源码',
-            '为您的应用程序提供最新流畅的设计控件和样式。',
+            '通过解读并修改源码提高便捷性，提高您的工作效率。',
             REPO_URL
         )
 
         self.linkCardView.addCard(
             FluentIcon.CODE,
-            '代码示例',
-            '查找演示特定任务、功能和API的示例。',
+            '功能演示',
+            '了解程序的功能，将您的工作效率提高至999999999999999%',
             EXAMPLE_URL
         )
 
         self.linkCardView.addCard(
             FluentIcon.FEEDBACK,
-            '发送反馈',
-            '通过提供反馈帮助我们改进PyQt Fluent小部件。',
+            '提供反馈',
+            '通过提供反馈帮助我们改进NetForge的功能。',
             FEEDBACK_URL
         )
 

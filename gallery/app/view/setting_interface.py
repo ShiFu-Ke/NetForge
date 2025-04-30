@@ -84,14 +84,14 @@ class SettingInterface(ScrollArea):
             '打开帮助页面',
             FIF.HELP,
             '帮助',
-            '发现新功能并学习有关PyQt Fluent Widgets的有用提示',
+            '帮助您快速了解软件功能',
             self.aboutGroup
         )
         self.feedbackCard = PrimaryPushSettingCard(
             '提供反馈',
             FIF.FEEDBACK,
             '提供反馈',
-            '通过提供反馈帮助我们改进PyQt Fluent小部件',
+            '通过提供反馈帮助我们改进NetForge的功能',
             self.aboutGroup
         )
 
@@ -200,7 +200,7 @@ class SettingInterface(ScrollArea):
             )
         else:
             view = FlyoutView(
-                title="发现新版本",
+                title=f"发现新版本 {software_msg["version"]}",
                 content='\n'.join(f"{i + 1}. {item}" for i, item in enumerate(software_msg["msg"])),
                 image=':gallery/images/header1.png',
                 isClosable=True
