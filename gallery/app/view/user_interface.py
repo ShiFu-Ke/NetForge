@@ -168,9 +168,6 @@ class CustomMessageBox(MessageBoxBase):
         self.user_lineEdit.setClearButtonEnabled(True)
 
         self.password_lineEdit = PasswordLineEdit(self)
-        regex = QRegExp("[a-zA-Z0-9\\s]+")
-        validator = QRegExpValidator(regex)
-        self.password_lineEdit.setValidator(validator)
         self.password_lineEdit.setPlaceholderText("密码")
         self.password_lineEdit.setClearButtonEnabled(True)
 
