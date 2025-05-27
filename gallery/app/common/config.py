@@ -27,7 +27,7 @@ class Config(QConfig):
 
 YEAR = 2025
 AUTHOR = "Morbid"
-VERSION = "v1.0.0"
+VERSION = "v1.0.1"
 HELP_URL = "https://www.baidu.com/"
 REPO_URL = "https://github.com/ShiFu-Ke/NetForge"
 EXAMPLE_URL = "https://www.baidu.com/"

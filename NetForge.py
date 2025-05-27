@@ -7,29 +7,35 @@ from PyQt5.QtWidgets import QApplication
 from qfluentwidgets import FluentTranslator
 
 from gallery.app.common.config import cfg
+from gallery.app.util.appLogger import AppLogger
 from gallery.app.view.main_window import MainWindow
 
-# 启用dpi比例
-if cfg.get(cfg.dpiScale) == "Auto":
-    QApplication.setHighDpiScaleFactorRoundingPolicy(
-        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-else:
-    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
-    os.environ["QT_SCALE_FACTOR"] = str(cfg.get(cfg.dpiScale))
+logger = AppLogger(log_dir="logs",log_file_prefix="netForge")
 
-QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+try:
+    # 启用dpi比例
+    if cfg.get(cfg.dpiScale) == "Auto":
+        QApplication.setHighDpiScaleFactorRoundingPolicy(
+            Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    else:
+        os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
+        os.environ["QT_SCALE_FACTOR"] = str(cfg.get(cfg.dpiScale))
 
-# 创建应用程序
-app = QApplication(sys.argv)
-app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
-# 翻译默认中文
-translator = FluentTranslator(QLocale(QLocale.Chinese, QLocale.China))
-app.installTranslator(translator)
+    # 创建应用程序
+    app = QApplication(sys.argv)
+    app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
 
-# 创建主窗口
-w = MainWindow()
-w.show()
+    # 翻译默认中文
+    translator = FluentTranslator(QLocale(QLocale.Chinese, QLocale.China))
+    app.installTranslator(translator)
 
-app.exec_()
+    # 创建主窗口
+    w = MainWindow()
+    w.show()
+
+    app.exec_()
+except Exception as e:
+    logger.exception(e)

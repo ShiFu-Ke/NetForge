@@ -130,8 +130,10 @@ class RunInterface(GalleryInterface):
                 self.stop_state_tooltip.closedSignal.emit()
                 self.stop_state_tooltip.hide()
                 self.stop_state_tooltip = None
+                self.clear_logging()
                 return
         logging.info(f"{'=' * 15}所有操作已完成！{'=' * 15}")
+        self.clear_logging()
 
     def process_device(self, device):
         """处理单个设备"""
@@ -234,6 +236,19 @@ class RunInterface(GalleryInterface):
         root_logger.setLevel(logging.INFO)
         root_logger.addHandler(file_handler)
         root_logger.addHandler(text_edit_handler)
+
+    @staticmethod
+    def clear_logging():
+        """清除日志配置，移除所有处理器并重置日志设置"""
+        root_logger = logging.getLogger()
+
+        for handler in root_logger.handlers[:]:
+            try:
+                handler.close()
+            except:
+                raise
+            root_logger.removeHandler(handler)
+
 
     def choose_dir(self):
         if self.run_thread and self.run_thread.is_alive():
